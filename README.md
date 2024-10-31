@@ -1,2 +1,2 @@
-# Delivery-in-10-minutes
-The project on the discipline "Fundamentals of the Java language"
+# Доставка за 10 минут
+Проект по дисциплине "Основы языка Java".
