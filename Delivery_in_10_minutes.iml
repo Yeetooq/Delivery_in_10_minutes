@@ -7,5 +7,46 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="module-library">
+      <library>
+        <CLASSES>
+          <root url="jar://C:/javafx/lib/javafx-swt.jar!/" />
+          <root url="jar://C:/javafx/lib/javafx.base.jar!/" />
+          <root url="jar://C:/javafx/lib/javafx.controls.jar!/" />
+          <root url="jar://C:/javafx/lib/javafx.fxml.jar!/" />
+          <root url="jar://C:/javafx/lib/javafx.graphics.jar!/" />
+          <root url="jar://C:/javafx/lib/javafx.media.jar!/" />
+          <root url="jar://C:/javafx/lib/javafx.swing.jar!/" />
+          <root url="jar://C:/javafx/lib/javafx.web.jar!/" />
+          <root url="file://$MODULE_DIR$" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES>
+          <root url="file://$MODULE_DIR$" />
+          <root url="file://$MODULE_DIR$/src" />
+        </SOURCES>
+        <jarDirectory url="file://$MODULE_DIR$" recursive="false" />
+        <jarDirectory url="file://$MODULE_DIR$" recursive="false" type="SOURCES" />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library">
+      <library>
+        <CLASSES>
+          <root url="file://C:/javafx/lib" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES>
+          <root url="file://C:/javafx/lib/javafx.base" />
+          <root url="file://C:/javafx/lib/javafx.controls" />
+          <root url="file://C:/javafx/lib/javafx.fxml" />
+          <root url="file://C:/javafx/lib/javafx.graphics" />
+          <root url="file://C:/javafx/lib/javafx.media" />
+          <root url="file://C:/javafx/lib/javafx.swing" />
+          <root url="file://C:/javafx/lib/javafx.web" />
+        </SOURCES>
+        <jarDirectory url="file://C:/javafx/lib" recursive="false" />
+      </library>
+    </orderEntry>
+    <orderEntry type="library" name="bin" level="project" />
   </component>
 </module>

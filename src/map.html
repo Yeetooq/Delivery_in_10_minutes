@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <title>Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet-routing-machine/3.2.12/leaflet-routing-machine.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-routing-machine/3.2.12/leaflet-routing-machine.min.js"></script>
+    <style>
+        html, body, #map {
+            width: 100%; height: 100%; margin: 0; padding: 0;
+        }
+        .control-buttons {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 1000;
+            background-color: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+        }
+        button, input, select {
+            margin: 5px;
+            padding: 8px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        input {
+            width: 150px;
+        }
+    </style>
+</head>
+<body>
+<div id="map"></div>
+
+<div class="control-buttons">
+    <div>
+        <label for="startPlace">Start Location:</label>
+        <input id="startPlace" type="text" placeholder="e.g., Moscow" />
+        <button id="setStartBtn">Set Start Point</button>
+    </div>
+    <div>
+        <label for="endPlace">End Location:</label>
+        <input id="endPlace" type="text" placeholder="e.g., Saint Petersburg" />
+        <button id="setEndBtn">Set End Point</button>
+    </div>
+    <div>
+        <label for="routeType">Route Type:</label>
+        <select id="routeType">
+            <option value="fastest">Fastest</option>
+            <option value="shortest">Shortest</option>
+        </select>
+    </div>
+    <button id="drawRouteBtn">Draw Route</button>
+</div>
+
+<script>
+    // Инициализация карты
+    var map = L.map('map').setView([55.751574, 37.573856], 10);
+
+    // Подключение тайлов OpenStreetMap
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    // Переменные для точек и маршрута
+    var startPoint = null;
+    var endPoint = null;
+    var routeControl = null;
+    var startMarker = null;
+    var endMarker = null;
+
+    // Функция для геокодирования места
+    function geocodePlace(place, callback) {
+        var url = 'https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(place);
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                if (data.length > 0) {
+                    var coordinates = [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+                    callback(coordinates);
+                } else {
+                    alert("Не удалось найти место: " + place);
+                }
+            })
+            .catch(error => {
+                console.error("Ошибка при геокодировании:", error);
+                alert("Произошла ошибка при поиске места.");
+            });
+    }
+
+    // Установка начальной точки
+    document.getElementById('setStartBtn').addEventListener('click', function() {
+        var startPlace = document.getElementById('startPlace').value;
+        if (startPlace) {
+            geocodePlace(startPlace, function(coordinates) {
+                startPoint = L.latLng(coordinates);
+                if (startMarker) {
+                    startMarker.setLatLng(startPoint);
+                } else {
+                    startMarker = L.marker(startPoint).addTo(map).bindPopup("Start Point").openPopup();
+                }
+                console.log('Start point set:', startPoint);
+            });
+        } else {
+            alert("Пожалуйста, введите название начальной точки.");
+        }
+    });
+
+    // Установка конечной точки
+    document.getElementById('setEndBtn').addEventListener('click', function() {
+        var endPlace = document.getElementById('endPlace').value;
+        if (endPlace) {
+            geocodePlace(endPlace, function(coordinates) {
+                endPoint = L.latLng(coordinates);
+                if (endMarker) {
+                    endMarker.setLatLng(endPoint);
+                } else {
+                    endMarker = L.marker(endPoint).addTo(map).bindPopup("End Point").openPopup();
+                }
+                console.log('End point set:', endPoint);
+            });
+        } else {
+            alert("Пожалуйста, введите название конечной точки.");
+        }
+    });
+
+    // Построение маршрута
+    document.getElementById('drawRouteBtn').addEventListener('click', function() {
+        var routeType = document.getElementById('routeType').value;
+
+        if (startPoint && endPoint) {
+            if (routeControl) {
+                map.removeControl(routeControl);
+            }
+            routeControl = L.Routing.control({
+                waypoints: [
+                    L.latLng(startPoint),
+                    L.latLng(endPoint)
+                ],
+                routeWhileDragging: false,
+                router: new L.Routing.OSRMv1({
+                    serviceUrl: 'https://router.project-osrm.org/route/v1',
+                    profile: routeType // Указываем тип маршрута: fastest или shortest
+                }),
+                lineOptions: {
+                    styles: [{ color: 'blue', weight: 4 }]
+                },
+                createMarker: function() { return null; },
+                show: false // Отключаем отображение панели с инструкциями маршрута
+            }).addTo(map);
+        } else {
+            alert("Пожалуйста, установите обе точки маршрута!");
+        }
+    });
+</script>
+</body>
+</html>
