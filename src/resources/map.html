@@ -171,7 +171,7 @@
                     startPlacemark = new ymaps.Placemark(startPoint, {
                         balloonContent: "Начальная точка"
                     }, {
-                        preset: 'islands#greenDotIcon'
+                        preset: 'islands#redDotIcon'
                     });
                     map.geoObjects.add(startPlacemark);
                 }
@@ -220,7 +220,7 @@
                                 var placemark = new ymaps.Placemark(coordinates, {
                                     balloonContent: address
                                 }, {
-                                    preset: 'islands#orangeDotIcon'
+                                    preset: 'islands#orangeFoodCircleIcon'
                                 });
                                 map.geoObjects.add(placemark);
                             }
