@@ -18,11 +18,22 @@
 </head>
 <body>
 <div id="map"></div>
-
 <script>
-    var map = L.map('map').setView([55.997054, 37.190744], 11); // Москва, центр карты
+    var map = L.map('map').setView([55.997054, 37.190744], 11);
+
+    // Оптимизация слоя тайлов
+    var tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors',
+        maxZoom: 19,
+        tileSize: 512,
+        zoomOffset: -1, // Это улучшает производительность за счет использования более оптимизированных изображений.
+        detectRetina: true, // Для использования Retina-изображений на устройствах с высокой плотностью пикселей.
+        reuseTiles: true // Переработка ранее загруженных тайлов
+    }).addTo(map); // Добавляем слой тайлов на карту
+
+    // Оставшийся код с маркерами и маршрутом
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
     var startPoint = null;

@@ -20,7 +20,7 @@ public class MapWithJFXPanel extends JFrame {
     private List<String> addresses = new ArrayList<>();
 
     public MapWithJFXPanel() {
-        setTitle("OpenStreetMap Integration");
+        setTitle("OpenStreetMap");
         setSize(800, 600);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         Platform.startup(() -> {});
@@ -38,7 +38,7 @@ public class MapWithJFXPanel extends JFrame {
             webEngine = webView.getEngine();
 
             // Загрузка HTML-файла карты
-            URL resource = getClass().getClassLoader().getResource("map.html");
+            URL resource = getClass().getClassLoader().getResource("resources/map.html");
             if (resource == null) {
                 System.err.println("Error: map.html not found! Current working directory: " + System.getProperty("user.dir"));
                 return;
@@ -77,7 +77,7 @@ public class MapWithJFXPanel extends JFrame {
     // Загрузка адресов из файла address.txt
     private void loadAddresses() {
     try (BufferedReader reader = new BufferedReader(
-            new FileReader(getClass().getClassLoader().getResource("addresses.txt").getFile()))) {
+            new FileReader(getClass().getClassLoader().getResource("resources/addresses.txt").getFile()))) {
         String line;
         while ((line = reader.readLine()) != null) {
             addresses.add(line.trim());
