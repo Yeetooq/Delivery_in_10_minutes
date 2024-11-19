@@ -20,7 +20,7 @@ public class MapWithJFXPanel extends JFrame {
     private List<String> addresses = new ArrayList<>();
 
     public MapWithJFXPanel() {
-        setTitle("OpenStreetMap");
+        setTitle("Яндекс Карты");
         setSize(800, 600);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         Platform.startup(() -> {});

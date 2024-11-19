@@ -2,14 +2,8 @@
 <html lang="ru">
 <head>
     <meta charset="utf-8">
-    <title>Map</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet-routing-machine/3.2.12/leaflet-routing-machine.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.default.css" />
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-routing-machine/3.2.12/leaflet-routing-machine.min.js"></script>
-    <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+    <title>Яндекс Карта</title>
+    <script src="https://api-maps.yandex.ru/2.1/?apikey=f2206a66-2fdf-432e-b948-9b64ddffc204&lang=ru_RU" type="text/javascript"></script>
     <style>
         html, body, #map {
             width: 100%; height: 100%; margin: 0; padding: 0;
@@ -19,93 +13,91 @@
 <body>
 <div id="map"></div>
 <script>
-    var map = L.map('map').setView([55.997054, 37.190744], 11);
+    ymaps.ready(init);
 
-    // Оптимизация слоя тайлов
-    var tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors',
-        maxZoom: 19,
-        tileSize: 512,
-        zoomOffset: -1, // Это улучшает производительность за счет использования более оптимизированных изображений.
-        detectRetina: true, // Для использования Retina-изображений на устройствах с высокой плотностью пикселей.
-        reuseTiles: true // Переработка ранее загруженных тайлов
-    }).addTo(map); // Добавляем слой тайлов на карту
+    function init() {
+        var map = new ymaps.Map("map", {
+            center: [55.997054, 37.190744],
+            zoom: 11,
+            controls: ['zoomControl', 'searchControl']
+        });
 
-    // Оставшийся код с маркерами и маршрутом
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(map);
+        // Глобальные переменные
+        var startPoint = null;
+        var endPoint = null;
+        var route = null;
+        var startPlacemark = null;
+        var endPlacemark = null;
 
-    var startPoint = null;
-    var endPoint = null;
-    var routeControl = null;
-    var startMarker = null;
-    var endMarker = null;
-
-    // Create a MarkerClusterGroup
-    var markers = L.markerClusterGroup();
-
-    function geocodePlace(place, callback) {
-        var url = 'https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(place);
-        fetch(url)
-            .then(response => response.json())
-            .then(data => {
-                if (data.length > 0) {
-                    var coordinates = [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+        // Функция для геокодирования места
+        function geocodePlace(place, callback) {
+            ymaps.geocode(place).then(function (res) {
+                var firstGeoObject = res.geoObjects.get(0);
+                if (firstGeoObject) {
+                    var coordinates = firstGeoObject.geometry.getCoordinates();
                     callback(coordinates);
                 } else {
                     alert("Не удалось найти место: " + place);
                 }
-            })
-            .catch(error => {
-                console.error("Ошибка при геокодировании:", error);
+            }, function (err) {
+                console.error("Ошибка при геокодировании:", err);
                 alert("Произошла ошибка при поиске места.");
             });
-    }
-
-    window.addEventListener('message', function(event) {
-        var data = event.data;
-        if (data.type === 'route') {
-            var startPlace = data.start;
-            var endPlace = data.end;
-
-            geocodePlace(startPlace, function(coordinates) {
-                startPoint = L.latLng(coordinates);
-                if (startMarker) {
-                    startMarker.setLatLng(startPoint);
-                } else {
-                    startMarker = L.marker(startPoint).addTo(markers).bindPopup("Start Point").openPopup();
-                }
-            });
-
-            geocodePlace(endPlace, function(coordinates) {
-                endPoint = L.latLng(coordinates);
-                if (endMarker) {
-                    endMarker.setLatLng(endPoint);
-                } else {
-                    endMarker = L.marker(endPoint).addTo(markers).bindPopup("End Point").openPopup();
-                }
-
-                if (startPoint && endPoint) {
-                    if (routeControl) {
-                        map.removeControl(routeControl);
-                    }
-                    routeControl = L.Routing.control({
-                        waypoints: [startPoint, endPoint],
-                        routeWhileDragging: false,
-                        router: new L.Routing.OSRMv1({
-                            serviceUrl: 'https://router.project-osrm.org/route/v1',
-                            profile: data.routeType || 'driving'
-                        }),
-                        show: false // Это скрывает панель с деталями маршрута
-                    }).addTo(map);
-                }
-            });
         }
-    });
 
-    // Add marker clusters to the map
-    map.addLayer(markers);
+        // Обработчик сообщения из внешнего источника
+        window.addEventListener('message', function (event) {
+            var data = event.data;
+            if (data.type === 'route') {
+                var startPlace = data.start;
+                var endPlace = data.end;
+
+                geocodePlace(startPlace, function (coordinates) {
+                    startPoint = coordinates;
+                    if (startPlacemark) {
+                        startPlacemark.geometry.setCoordinates(startPoint);
+                    } else {
+                        startPlacemark = new ymaps.Placemark(startPoint, {
+                            balloonContent: "Начальная точка"
+                        }, {
+                            preset: 'islands#greenDotIcon'
+                        });
+                        map.geoObjects.add(startPlacemark);
+                    }
+                });
+
+                geocodePlace(endPlace, function (coordinates) {
+                    endPoint = coordinates;
+                    if (endPlacemark) {
+                        endPlacemark.geometry.setCoordinates(endPoint);
+                    } else {
+                        endPlacemark = new ymaps.Placemark(endPoint, {
+                            balloonContent: "Конечная точка"
+                        }, {
+                            preset: 'islands#redDotIcon'
+                        });
+                        map.geoObjects.add(endPlacemark);
+                    }
+
+                    if (startPoint && endPoint) {
+                        if (route) {
+                            map.geoObjects.remove(route);
+                        }
+                        ymaps.route([startPoint, endPoint], {
+                            mapStateAutoApply: true,
+                            routingMode: data.routeType || 'auto'
+                        }).then(function (newRoute) {
+                            route = newRoute;
+                            map.geoObjects.add(route);
+                        }, function (error) {
+                            console.error("Ошибка построения маршрута:", error);
+                            alert("Не удалось построить маршрут.");
+                        });
+                    }
+                });
+            }
+        });
+    }
 </script>
 </body>
 </html>
