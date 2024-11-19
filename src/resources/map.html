@@ -125,7 +125,7 @@
         var zelenogradPolygon = new ymaps.Polygon(zelenogradPolygonCoords, {
             hintContent: "Зеленоград"
         }, {
-            fillColor: '#00FF0010', // Полупрозрачный зеленый
+            fillColor: '#00FF0010',
             strokeColor: '#00800090',
             strokeWidth: 2
         });
@@ -148,34 +148,36 @@
                 } else {
                     alert("Не удалось найти место: " + place);
                 }
-            }, function (err) {
-                console.error("Ошибка при геокодировании:", err);
+            }).catch(function (err) {
+                console.error("Ошибка геокодирования:", err);
                 alert("Произошла ошибка при поиске места.");
             });
         }
 
-        // Обработчик сообщения из внешнего источника
-        window.addEventListener('message', function (event) {
-            var data = event.data;
-            if (data.type === 'route') {
-                var startPlace = data.start;
-                var endPlace = data.end;
+        // Функция для построения маршрута
+        function drawRoute(startAddress, endAddress, routeType = 'auto') {
+            // Очистка старого маршрута
+            if (route) {
+                map.geoObjects.remove(route);
+                route = null;
+            }
 
-                geocodePlace(startPlace, function (coordinates) {
-                    startPoint = coordinates;
-                    if (startPlacemark) {
-                        startPlacemark.geometry.setCoordinates(startPoint);
-                    } else {
-                        startPlacemark = new ymaps.Placemark(startPoint, {
-                            balloonContent: "Начальная точка"
-                        }, {
-                            preset: 'islands#greenDotIcon'
-                        });
-                        map.geoObjects.add(startPlacemark);
-                    }
-                });
+            // Сначала получаем начальную точку
+            geocodePlace(startAddress, function (coordinates) {
+                startPoint = coordinates;
+                if (startPlacemark) {
+                    startPlacemark.geometry.setCoordinates(startPoint);
+                } else {
+                    startPlacemark = new ymaps.Placemark(startPoint, {
+                        balloonContent: "Начальная точка"
+                    }, {
+                        preset: 'islands#greenDotIcon'
+                    });
+                    map.geoObjects.add(startPlacemark);
+                }
 
-                geocodePlace(endPlace, function (coordinates) {
+                // Получаем конечную точку, когда начальная уже определена
+                geocodePlace(endAddress, function (coordinates) {
                     endPoint = coordinates;
                     if (endPlacemark) {
                         endPlacemark.geometry.setCoordinates(endPoint);
@@ -188,27 +190,24 @@
                         map.geoObjects.add(endPlacemark);
                     }
 
+                    // Когда обе точки определены, строим маршрут
                     if (startPoint && endPoint) {
-                        if (route) {
-                            map.geoObjects.remove(route);
-                        }
-                        ymaps.route([startPoint, endPoint], {
-                            mapStateAutoApply: true,
-                            routingMode: data.routeType || 'auto'
-                        }).then(function (newRoute) {
-                            route = newRoute;
-                            map.geoObjects.add(route);
-                        }, function (error) {
-                            console.error("Ошибка построения маршрута:", error);
-                            alert("Не удалось построить маршрут.");
-                        });
+                        ymaps.route([startPoint, endPoint], { routingMode: routeType })
+                            .then(function (newRoute) {
+                                route = newRoute;
+                                map.geoObjects.add(route);
+                            })
+                            .catch(function (error) {
+                                console.error("Ошибка построения маршрута:", error);
+                                alert("Не удалось построить маршрут.");
+                            });
                     }
                 });
-            }
-        });
+            });
+        }
 
         // Загрузка адресов и размещение меток
-        fetch('address.txt')
+        fetch('addresses.txt')
             .then(response => response.text())
             .then(data => {
                 var addresses = data.split('\n');
@@ -221,7 +220,7 @@
                                 var placemark = new ymaps.Placemark(coordinates, {
                                     balloonContent: address
                                 }, {
-                                    preset: 'islands#blueDotIcon'
+                                    preset: 'islands#orangeDotIcon'
                                 });
                                 map.geoObjects.add(placemark);
                             }
@@ -229,7 +228,15 @@
                     }
                 });
             })
-            .catch(err => console.error("Ошибка загрузки файла address.txt:", err));
+            .catch(err => console.error("Ошибка загрузки файла addresses.txt:", err));
+
+        // Обработчик сообщений для построения маршрутов
+        window.addEventListener('message', function (event) {
+            var data = event.data;
+            if (data.type === 'route') {
+                drawRoute(data.start, data.end, data.routeType || 'auto');
+            }
+        });
     }
 </script>
 </body>
