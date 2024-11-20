@@ -77,7 +77,7 @@ public class MapWithJFXPanel extends JFrame {
     // Загрузка адресов из файла address.txt
     private void loadAddresses() {
     try (BufferedReader reader = new BufferedReader(
-            new FileReader(getClass().getClassLoader().getResource("resources/addresses.txt").getFile()))) {
+            new FileReader(getClass().getClassLoader().getResource("resources/address_start.txt").getFile()))) {
         String line;
         while ((line = reader.readLine()) != null) {
             addresses.add(line.trim());
