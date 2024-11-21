@@ -6,7 +6,10 @@
     <script src="https://api-maps.yandex.ru/2.1/?apikey=f2206a66-2fdf-432e-b948-9b64ddffc204&lang=ru_RU" type="text/javascript"></script>
     <style>
         html, body, #map {
-            width: 100%; height: 100%; margin: 0; padding: 0;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
         }
     </style>
 </head>
@@ -22,6 +25,13 @@
             controls: ['zoomControl', 'searchControl']
         });
 
+        // Переменные для управления зонами, метками и маршрутом
+        var zonesAndMarkersVisible = false;
+        var zones = [];
+        var markers = [];
+        var route = null; // Для хранения маршрута
+
+        // Координаты зон
         // Координаты 1 зоны
         var PolygonCoords_1 = [
             [
@@ -136,146 +146,83 @@
             ]
         ];
 
-        var Polygon1 = new ymaps.Polygon(PolygonCoords_1, {
-            hintContent: "1 зона доставки"
-        }, {
-            fillColor: '#0000FF10',
-            strokeColor: '#0000FF80',
-            strokeWidth: 2
-        });
+        // Функция добавления зон и меток
+        function addZonesAndMarkers() {
+            zones.push(new ymaps.Polygon(PolygonCoords_1, { hintContent: "1 зона доставки" }, { fillColor: '#00FF0010', strokeColor: '#00FF0080', strokeWidth: 2 }));
+            zones.push(new ymaps.Polygon(PolygonCoords_2, { hintContent: "2 зона доставки" }, { fillColor: '#00FF0010', strokeColor: '#00FF0080', strokeWidth: 2 }));
+            zones.push(new ymaps.Polygon(PolygonCoords_3, { hintContent: "3 зона доставки" }, { fillColor: '#00FF0010', strokeColor: '#00FF0080', strokeWidth: 2 }));
 
-        var Polygon2 = new ymaps.Polygon(PolygonCoords_2, {
-            hintContent: "2 зона доставки"
-        }, {
-            fillColor: '#0000FF10',
-            strokeColor: '#0000FF80',
-            strokeWidth: 2
-        });
+            zones.forEach(zone => map.geoObjects.add(zone));
 
-        var Polygon3 = new ymaps.Polygon(PolygonCoords_3, {
-            hintContent: "3 зона доставки"
-        }, {
-            fillColor: '#0000FF10',
-            strokeColor: '#0000FF80',
-            strokeWidth: 2
-        });
-
-
-
-
-        // Добавление полигонов на карту
-        map.geoObjects.add(Polygon1);
-        map.geoObjects.add(Polygon2);
-        map.geoObjects.add(Polygon3);
-
-        // Глобальные переменные для маршрутов
-        var startPoint = null;
-        var endPoint = null;
-        var route = null;
-        var startPlacemark = null;
-        var endPlacemark = null;
-
-        // Функция для геокодирования места
-        function geocodePlace(place, callback) {
-            ymaps.geocode(place).then(function (res) {
-                var firstGeoObject = res.geoObjects.get(0);
-                if (firstGeoObject) {
-                    var coordinates = firstGeoObject.geometry.getCoordinates();
-                    callback(coordinates);
-                } else {
-                    alert("Не удалось найти место: " + place);
-                }
-            }).catch(function (err) {
-                console.error("Ошибка геокодирования:", err);
-                alert("Произошла ошибка при поиске места.");
-            });
+            // Загружаем и добавляем метки
+            fetch('addresses.txt')
+                .then(response => response.text())
+                .then(data => {
+                    var addresses = data.split('\n');
+                    addresses.forEach(address => {
+                        if (address.trim()) {
+                            ymaps.geocode(address.trim()).then(function (res) {
+                                var firstGeoObject = res.geoObjects.get(0);
+                                if (firstGeoObject) {
+                                    var coordinates = firstGeoObject.geometry.getCoordinates();
+                                    var placemark = new ymaps.Placemark(coordinates, {
+                                        balloonContent: address
+                                    }, {
+                                        iconLayout: 'default#image',
+                                        iconImageHref: 'or_food.png',
+                                        iconImageSize: [25, 30],
+                                        iconImageOffset: [-20, -20]
+                                    });
+                                    markers.push(placemark);
+                                    map.geoObjects.add(placemark);
+                                }
+                            }).catch(err => console.error("Ошибка геокодирования адреса:", address, err));
+                        }
+                    });
+                })
+                .catch(err => console.error("Ошибка загрузки файла addresses.txt:", err));
         }
 
-        // Функция для построения маршрута
-        function drawRoute(startAddress, endAddress, routeType = 'auto') {
-            // Очистка старого маршрута
+        // Функция удаления зон и меток
+        function removeZonesAndMarkers() {
+            zones.forEach(zone => map.geoObjects.remove(zone));
+            zones = []; // Очищаем массив зон
+
+            markers.forEach(marker => map.geoObjects.remove(marker));
+            markers = []; // Очищаем массив меток
+        }
+
+        // Функция переключения видимости зон и меток
+        window.showZonesAndMarkers = function () {
+            if (!zonesAndMarkersVisible) {
+                addZonesAndMarkers();
+            } else {
+                removeZonesAndMarkers();
+            }
+            zonesAndMarkersVisible = !zonesAndMarkersVisible;
+        };
+
+        // Функция построения маршрута
+        function drawRoute(startAddress, endAddress) {
+            // Удаляем только текущий маршрут, не трогая другие объекты
             if (route) {
                 map.geoObjects.remove(route);
                 route = null;
             }
 
-            // Сначала получаем начальную точку
-            geocodePlace(startAddress, function (coordinates) {
-                startPoint = coordinates;
-                if (startPlacemark) {
-                    startPlacemark.geometry.setCoordinates(startPoint);
-                } else {
-                    startPlacemark = new ymaps.Placemark(startPoint, {
-                        balloonContent: "Начальная точка"
-                    }, {
-                        preset: 'islands#redDotIcon'
-                    });
-                    map.geoObjects.add(startPlacemark);
-                }
-
-                // Получаем конечную точку, когда начальная уже определена
-                geocodePlace(endAddress, function (coordinates) {
-                    endPoint = coordinates;
-                    if (endPlacemark) {
-                        endPlacemark.geometry.setCoordinates(endPoint);
-                    } else {
-                        endPlacemark = new ymaps.Placemark(endPoint, {
-                            balloonContent: "Конечная точка"
-                        }, {
-                            preset: 'islands#redDotIcon'
-                        });
-                        map.geoObjects.add(endPlacemark);
-                    }
-
-                    // Когда обе точки определены, строим маршрут
-                    if (startPoint && endPoint) {
-                        ymaps.route([startPoint, endPoint], { routingMode: routeType })
-                            .then(function (newRoute) {
-                                route = newRoute;
-                                map.geoObjects.add(route);
-                            })
-                            .catch(function (error) {
-                                console.error("Ошибка построения маршрута:", error);
-                                alert("Не удалось построить маршрут.");
-                            });
-                    }
-                });
-            });
+            ymaps.route([startAddress, endAddress], {
+                mapStateAutoApply: true
+            }).then(function (newRoute) {
+                route = newRoute;
+                map.geoObjects.add(route);
+            }).catch(err => console.error("Ошибка построения маршрута:", err));
         }
 
-        // Загрузка адресов и размещение меток
-        fetch('addresses.txt')
-            .then(response => response.text())
-            .then(data => {
-                var addresses = data.split('\n');
-                addresses.forEach(address => {
-                    if (address.trim()) {
-                        ymaps.geocode(address.trim()).then(function (res) {
-                            var firstGeoObject = res.geoObjects.get(0);
-                            if (firstGeoObject) {
-                                var coordinates = firstGeoObject.geometry.getCoordinates();
-                                var placemark = new ymaps.Placemark(coordinates, {
-                                    balloonContent: address
-                                }, {
-                                    iconLayout: 'default#image',
-                                    iconImageHref: 'or_food.png', // Добавьте кастомную иконку, если нужно
-                                    iconImageSize: [25, 30], // Фиксированный размер значков
-                                    iconImageOffset: [-20, -20] // Смещение значков (если нужно)
-                                });
-
-                                map.geoObjects.add(placemark);
-                            }
-                        }).catch(err => console.error("Ошибка геокодирования адреса:", address, err));
-                    }
-                });
-            })
-            .catch(err => console.error("Ошибка загрузки файла addresses.txt:", err));
-
-        // Обработчик сообщений для построения маршрутов
+        // Обработчик событий из WebView
         window.addEventListener('message', function (event) {
             var data = event.data;
             if (data.type === 'route') {
-                drawRoute(data.start, data.end, data.routeType || 'auto');
+                drawRoute(data.start, data.end);
             }
         });
     }

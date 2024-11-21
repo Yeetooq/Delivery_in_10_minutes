@@ -54,10 +54,18 @@ public class MapWithJFXPanel extends JFrame {
         JComboBox<String> startComboBox = new JComboBox<>(addresses.toArray(new String[0]));
         JTextField endField = new JTextField(15);
         JButton drawRouteButton = new JButton("Draw Route");
+        JButton autoButton = new JButton("Auto");
 
+        // Кнопка для построения маршрута
         drawRouteButton.addActionListener(e -> {
             String start = (String) startComboBox.getSelectedItem();
             String end = endField.getText();
+
+            // Проверяем, что адреса не пустые
+            if (start == null || start.isEmpty() || end == null || end.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Укажите оба адреса!");
+                return;
+            }
 
             // Отправка данных в WebView для прорисовки маршрута
             Platform.runLater(() -> webEngine.executeScript(
@@ -65,29 +73,34 @@ public class MapWithJFXPanel extends JFrame {
             ));
         });
 
+        // Кнопка для отображения зон и меток
+        autoButton.addActionListener(e -> {
+            Platform.runLater(() -> webEngine.executeScript("showZonesAndMarkers()"));
+        });
+
         controlPanel.add(new JLabel("Start:"));
         controlPanel.add(startComboBox);
         controlPanel.add(new JLabel("End:"));
         controlPanel.add(endField);
         controlPanel.add(drawRouteButton);
+        controlPanel.add(autoButton);
 
         add(controlPanel, BorderLayout.SOUTH);
     }
 
-    // Загрузка адресов из файла address.txt
+    // Загрузка адресов из файла address_start.txt
     private void loadAddresses() {
-    try (BufferedReader reader = new BufferedReader(
-            new FileReader(getClass().getClassLoader().getResource("resources/address_start.txt").getFile()))) {
-        String line;
-        while ((line = reader.readLine()) != null) {
-            addresses.add(line.trim());
+        try (BufferedReader reader = new BufferedReader(
+                new FileReader(getClass().getClassLoader().getResource("resources/address_start.txt").getFile()))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                addresses.add(line.trim());
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Ошибка при загрузке адресов из файла.");
         }
-    } catch (IOException e) {
-        e.printStackTrace();
-        JOptionPane.showMessageDialog(this, "Ошибка при загрузке адресов из файла.");
     }
-}
-
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
