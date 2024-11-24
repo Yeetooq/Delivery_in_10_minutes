@@ -27,23 +27,22 @@ public class Geocoder {
         System.out.println("Координаты введённого адреса: " + inputCoordinates);
 
         // Чтение точек из файла
-        try (BufferedReader reader = new BufferedReader(new FileReader("src/resources/addresses.txt"));
-) {
+        try (BufferedReader reader = new BufferedReader(new FileReader("src/resources/addresses.txt"))) {
             String nearestPoint = null;
             double minDistance = Double.MAX_VALUE;
 
             String line;
             while ((line = reader.readLine()) != null) {
                 // Получение координат из строки адреса в файле
-                String fileCoordinates = getCoordinatesForAddress(line, apiKey);
-                if (fileCoordinates != null) {
+                String fileCoordinates = line.trim(); // Извлекаем координаты, они должны быть в формате "широта,долгота"
+                if (!fileCoordinates.isEmpty()) {
                     // Расчёт расстояния
                     double distance = calculateDistance(inputCoordinates, fileCoordinates);
-                    System.out.printf("Расстояние до %s: %.2f км%n", line, distance);
+                    System.out.printf("Расстояние до %s: %.2f км%n", fileCoordinates, distance);
 
                     if (distance < minDistance) {
                         minDistance = distance;
-                        nearestPoint = line;
+                        nearestPoint = fileCoordinates;
                     }
                 }
             }
@@ -97,7 +96,7 @@ public class Geocoder {
                             .replace("\"", "").trim();
                     String[] coords = coordinatesLine.split(" ");
                     if (coords.length == 2) {
-                        return coords[1] + "," + coords[0];
+                        return coords[1] + "," + coords[0]; // координаты: долгота, широта
                     }
                 }
             }
@@ -111,17 +110,17 @@ public class Geocoder {
         String[] split1 = coords1.split(",");
         String[] split2 = coords2.split(",");
 
-        double lat1 = Math.toRadians(Double.parseDouble(split1[0]));
-        double lon1 = Math.toRadians(Double.parseDouble(split1[1]));
-        double lat2 = Math.toRadians(Double.parseDouble(split2[0]));
-        double lon2 = Math.toRadians(Double.parseDouble(split2[1]));
+        double lat1 = Math.toRadians(Double.parseDouble(split1[0])); // широта
+        double lon1 = Math.toRadians(Double.parseDouble(split1[1])); // долгота
+        double lat2 = Math.toRadians(Double.parseDouble(split2[0])); // широта
+        double lon2 = Math.toRadians(Double.parseDouble(split2[1])); // долгота
 
         double dLat = lat2 - lat1;
         double dLon = lon2 - lon1;
 
         double a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                   Math.cos(lat1) * Math.cos(lat2) *
-                   Math.sin(dLon / 2) * Math.sin(dLon / 2);
+                Math.cos(lat1) * Math.cos(lat2) *
+                        Math.sin(dLon / 2) * Math.sin(dLon / 2);
 
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         double earthRadius = 6371.0; // Радиус Земли в км

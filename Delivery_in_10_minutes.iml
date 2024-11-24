@@ -10,11 +10,19 @@
     <orderEntry type="module-library">
       <library>
         <CLASSES>
-          <root url="file://$USER_HOME$/Downloads/openjfx-23.0.1_windows-x64_bin-sdk/javafx-sdk-23.0.1/lib" />
+          <root url="file://C:/javafx/lib" />
         </CLASSES>
         <JAVADOC />
-        <SOURCES />
-        <jarDirectory url="file://$USER_HOME$/Downloads/openjfx-23.0.1_windows-x64_bin-sdk/javafx-sdk-23.0.1/lib" recursive="false" />
+        <SOURCES>
+          <root url="file://C:/javafx/lib/javafx.base" />
+          <root url="file://C:/javafx/lib/javafx.controls" />
+          <root url="file://C:/javafx/lib/javafx.fxml" />
+          <root url="file://C:/javafx/lib/javafx.graphics" />
+          <root url="file://C:/javafx/lib/javafx.media" />
+          <root url="file://C:/javafx/lib/javafx.swing" />
+          <root url="file://C:/javafx/lib/javafx.web" />
+        </SOURCES>
+        <jarDirectory url="file://C:/javafx/lib" recursive="false" />
       </library>
     </orderEntry>
   </component>
