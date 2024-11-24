@@ -11,7 +11,6 @@ import java.awt.*;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -38,60 +37,42 @@ public class MapWithJFXPanel extends JFrame {
             webEngine = webView.getEngine();
 
             // Загрузка HTML-файла карты
-            URL resource = getClass().getClassLoader().getResource("resources/map.html");
-            if (resource == null) {
-                System.err.println("Error: map.html not found! Current working directory: " + System.getProperty("user.dir"));
-                return;
-            }
-
-            webEngine.load(resource.toExternalForm());
+            webEngine.load(getClass().getResource("/resources/map.html").toExternalForm());
             Scene scene = new Scene(webView);
             jfxPanel.setScene(scene);
         });
 
         // Панель управления (Swing)
         JPanel controlPanel = new JPanel();
-        JComboBox<String> startComboBox = new JComboBox<>(addresses.toArray(new String[0]));
-        JTextField endField = new JTextField(15);
-        JButton drawRouteButton = new JButton("Draw Route");
+        JTextField addressField = new JTextField(20);
         JButton autoButton = new JButton("Auto");
 
-        // Кнопка для построения маршрута
-        drawRouteButton.addActionListener(e -> {
-            String start = (String) startComboBox.getSelectedItem();
-            String end = endField.getText();
-
-            // Проверяем, что адреса не пустые
-            if (start == null || start.isEmpty() || end == null || end.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Укажите оба адреса!");
+        // Обработка события для ввода адреса
+        addressField.addActionListener(e -> {
+            String address = addressField.getText().trim();
+            if (address.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Введите адрес!");
                 return;
             }
 
-            // Отправка данных в WebView для прорисовки маршрута
+            // Отправка адреса в WebView для поиска ближайшей точки и построения маршрута
             Platform.runLater(() -> webEngine.executeScript(
-                    "window.postMessage({type: 'route', start: '" + start + "', end: '" + end + "'}, '*')"
+                    "window.postMessage({type: 'findNearest', address: '" + address + "'}, '*')"
             ));
         });
 
-        // Кнопка для отображения зон и меток
-        autoButton.addActionListener(e -> {
-            Platform.runLater(() -> webEngine.executeScript("showZonesAndMarkers()"));
-        });
+        // Обработка кнопки "Auto"
+        autoButton.addActionListener(e -> Platform.runLater(() -> webEngine.executeScript("showZonesAndMarkers()")));
 
-        controlPanel.add(new JLabel("Start:"));
-        controlPanel.add(startComboBox);
-        controlPanel.add(new JLabel("End:"));
-        controlPanel.add(endField);
-        controlPanel.add(drawRouteButton);
+        controlPanel.add(new JLabel("Введите адрес:"));
+        controlPanel.add(addressField);
         controlPanel.add(autoButton);
-
         add(controlPanel, BorderLayout.SOUTH);
     }
 
-    // Загрузка адресов из файла address_start.txt
+    // Загрузка адресов из файла
     private void loadAddresses() {
-        try (BufferedReader reader = new BufferedReader(
-                new FileReader(getClass().getClassLoader().getResource("resources/address_start.txt").getFile()))) {
+        try (BufferedReader reader = new BufferedReader(new FileReader("src/resources/addresses.txt"))) {
             String line;
             while ((line = reader.readLine()) != null) {
                 addresses.add(line.trim());

@@ -22,7 +22,7 @@
         var map = new ymaps.Map("map", {
             center: [55.989008, 37.206851], // Центр Зеленограда
             zoom: 12,
-            controls: ['zoomControl', 'searchControl']
+            controls: ['zoomControl']
         });
 
         // Переменные для управления зонами, метками и маршрутом
@@ -202,12 +202,10 @@
             zonesAndMarkersVisible = !zonesAndMarkersVisible;
         };
 
-        // Функция построения маршрута
+        // Построение маршрута
         function drawRoute(startAddress, endAddress) {
-            // Удаляем только текущий маршрут, не трогая другие объекты
             if (route) {
                 map.geoObjects.remove(route);
-                route = null;
             }
 
             ymaps.route([startAddress, endAddress], {
@@ -218,14 +216,40 @@
             }).catch(err => console.error("Ошибка построения маршрута:", err));
         }
 
-        // Обработчик событий из WebView
+        // Определение ближайшей точки
+        function findNearestPoint(address) {
+            fetch('addresses.txt')
+                .then(response => response.text())
+                .then(data => {
+                    var addresses = data.split('\n');
+                    var promises = addresses.map(a => ymaps.geocode(a.trim()).then(res => {
+                        return { address: a, coords: res.geoObjects.get(0).geometry.getCoordinates() };
+                    }));
+
+                    Promise.all(promises).then(results => {
+                        ymaps.geocode(address).then(res => {
+                            var userCoords = res.geoObjects.get(0).geometry.getCoordinates();
+                            var nearest = results.reduce((prev, curr) => {
+                                var prevDistance = ymaps.coordSystem.geo.getDistance(userCoords, prev.coords);
+                                var currDistance = ymaps.coordSystem.geo.getDistance(userCoords, curr.coords);
+                                return currDistance < prevDistance ? curr : prev;
+                            });
+
+                            drawRoute(address, nearest.address);
+                        });
+                    });
+                }).catch(err => console.error("Ошибка загрузки адресов:", err));
+        }
+
+        // Обработка сообщений из WebView
         window.addEventListener('message', function (event) {
             var data = event.data;
-            if (data.type === 'route') {
-                drawRoute(data.start, data.end);
+            if (data.type === 'findNearest') {
+                findNearestPoint(data.address);
             }
         });
     }
 </script>
+
 </body>
 </html>
