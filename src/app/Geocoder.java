@@ -4,38 +4,70 @@ import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.util.Scanner;
 
 public class Geocoder {
     private static final String API_URL = "https://geocode-maps.yandex.ru/1.x/";
 
     public static void main(String[] args) {
         String apiKey = "f2206a66-2fdf-432e-b948-9b64ddffc204"; // Ваш API ключ
-        String address = "Зеленоград к435";
 
-        String coordinates = getCoordinatesForAddress(address, apiKey);
-        if (coordinates != null) {
-            System.out.println("Координаты для адреса \"" + address + "\": " + coordinates);
-        } else {
-            System.err.println("Не удалось получить координаты для адреса \"" + address + "\".");
+        // Ввод адреса с клавиатуры
+        Scanner scanner = new Scanner(System.in);
+        System.out.print("Введите адрес: ");
+        String inputAddress = scanner.nextLine();
+
+        // Получение координат для введённого адреса
+        String inputCoordinates = getCoordinatesForAddress(inputAddress, apiKey);
+        if (inputCoordinates == null) {
+            System.err.println("Не удалось получить координаты для введённого адреса.");
+            return;
+        }
+
+        System.out.println("Координаты введённого адреса: " + inputCoordinates);
+
+        // Чтение точек из файла
+        try (BufferedReader reader = new BufferedReader(new FileReader("src/resources/addresses.txt"));
+) {
+            String nearestPoint = null;
+            double minDistance = Double.MAX_VALUE;
+
+            String line;
+            while ((line = reader.readLine()) != null) {
+                // Получение координат из строки адреса в файле
+                String fileCoordinates = getCoordinatesForAddress(line, apiKey);
+                if (fileCoordinates != null) {
+                    // Расчёт расстояния
+                    double distance = calculateDistance(inputCoordinates, fileCoordinates);
+                    System.out.printf("Расстояние до %s: %.2f км%n", line, distance);
+
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        nearestPoint = line;
+                    }
+                }
+            }
+
+            // Вывод ближайшей точки
+            if (nearestPoint != null) {
+                System.out.println("Ближайшая точка: " + nearestPoint + " (расстояние: " + minDistance + " км)");
+            } else {
+                System.err.println("Не удалось определить ближайшую точку.");
+            }
+        } catch (IOException e) {
+            System.err.println("Ошибка чтения файла: " + e.getMessage());
         }
     }
 
     private static String getCoordinatesForAddress(String address, String apiKey) {
         try {
-            // Кодируем адрес для URL
             String encodedAddress = URLEncoder.encode(address, "UTF-8");
             String requestUrl = API_URL + "?apikey=" + apiKey + "&format=json&geocode=" + encodedAddress;
 
-            //System.out.println("URL запроса: " + requestUrl);
-
-            // Создание HTTP-запроса
             HttpURLConnection connection = (HttpURLConnection) new URL(requestUrl).openConnection();
             connection.setRequestMethod("GET");
 
-            // Получение кода ответа
             int responseCode = connection.getResponseCode();
-            //System.out.println("HTTP код ответа: " + responseCode);
-
             if (responseCode == HttpURLConnection.HTTP_OK) {
                 try (BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
                     StringBuilder response = new StringBuilder();
@@ -43,7 +75,6 @@ public class Geocoder {
                     while ((line = in.readLine()) != null) {
                         response.append(line);
                     }
-                    //System.out.println("Ответ API: " + response.toString());
                     return parseCoordinates(response.toString());
                 }
             } else {
@@ -51,40 +82,50 @@ public class Geocoder {
             }
         } catch (Exception e) {
             System.err.println("Ошибка при получении координат: " + e.getMessage());
-            e.printStackTrace();
         }
         return null;
     }
 
     private static String parseCoordinates(String jsonResponse) {
         try {
-            // Ищем "pos" в JSON
             int posIndex = jsonResponse.indexOf("\"pos\"");
             if (posIndex != -1) {
-                // Извлекаем координаты из строки
                 int startIndex = jsonResponse.indexOf(":", posIndex) + 1;
                 int endIndex = jsonResponse.indexOf("}", startIndex);
                 if (startIndex > 0 && endIndex > startIndex) {
                     String coordinatesLine = jsonResponse.substring(startIndex, endIndex)
                             .replace("\"", "").trim();
                     String[] coords = coordinatesLine.split(" ");
-
-                    // Проверяем, что координаты корректны
                     if (coords.length == 2) {
-                        return coords[1] + ", " + coords[0]; // Поменять местами широту и долготу
-                    } else {
-                        System.err.println("Неверный формат координат: " + coordinatesLine);
+                        return coords[1] + "," + coords[0];
                     }
-                } else {
-                    System.err.println("Координаты не найдены в указанном диапазоне строки JSON.");
                 }
-            } else {
-                System.err.println("Ключ \"pos\" не найден в JSON-ответе.");
             }
         } catch (Exception e) {
             System.err.println("Ошибка парсинга JSON-ответа: " + e.getMessage());
-            e.printStackTrace();
         }
         return null;
+    }
+
+    private static double calculateDistance(String coords1, String coords2) {
+        String[] split1 = coords1.split(",");
+        String[] split2 = coords2.split(",");
+
+        double lat1 = Math.toRadians(Double.parseDouble(split1[0]));
+        double lon1 = Math.toRadians(Double.parseDouble(split1[1]));
+        double lat2 = Math.toRadians(Double.parseDouble(split2[0]));
+        double lon2 = Math.toRadians(Double.parseDouble(split2[1]));
+
+        double dLat = lat2 - lat1;
+        double dLon = lon2 - lon1;
+
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                   Math.cos(lat1) * Math.cos(lat2) *
+                   Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        double earthRadius = 6371.0; // Радиус Земли в км
+
+        return earthRadius * c;
     }
 }
