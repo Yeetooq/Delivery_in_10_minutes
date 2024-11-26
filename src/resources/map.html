@@ -208,18 +208,76 @@
             zonesAndMarkersVisible = !zonesAndMarkersVisible;
         };
 
-        // Построение маршрута
+       // Функция построения маршрута с проверкой на выход за пределы зон
         function drawRoute(startAddress, endAddress) {
+            // Удаляем старый маршрут, если он существует
             if (route) {
                 map.geoObjects.remove(route);
             }
 
-            ymaps.route([startAddress, endAddress], {
-                mapStateAutoApply: true
-            }).then(function (newRoute) {
-                route = newRoute;
-                map.geoObjects.add(route);
-            }).catch(err => console.error("Ошибка построения маршрута:", err));
+            // Получаем координаты начального и конечного адреса
+            ymaps.geocode(startAddress).then(function (res) {
+                var startCoordinates = res.geoObjects.get(0).geometry.getCoordinates();
+
+                ymaps.geocode(endAddress).then(function (res) {
+                    var endCoordinates = res.geoObjects.get(0).geometry.getCoordinates();
+
+                    // Проверяем, находятся ли начальная и конечная точки в пределах зон
+                    var isStartInsideZone = zones.some(function (zone) {
+                        return zone.geometry.contains(startCoordinates); // Проверяем для начальной точки
+                    });
+
+                    var isEndInsideZone = zones.some(function (zone) {
+                        return zone.geometry.contains(endCoordinates); // Проверяем для конечной точки
+                    });
+
+                    // Если хотя бы одна точка не находится в пределах зоны, показываем ошибку
+                    if (!isStartInsideZone || !isEndInsideZone) {
+                        alert("Ошибка: одна из точек маршрута находится за пределами зоны доставки!");
+                        return;  // Прерываем выполнение, если точка вне зоны
+                    }
+
+                    // Построение маршрута
+                    ymaps.route([startCoordinates, endCoordinates], {
+                        mapStateAutoApply: true
+                    }).then(function (newRoute) {
+                        route = newRoute;
+                        map.geoObjects.add(route);
+
+                        // Проверяем, все ли точки маршрута внутри зон
+                        var isRouteInsideZones = true;
+
+                        // Получаем все точки маршрута, используя метод getPath
+                        var routePath = newRoute.getPaths().get(0);  // получаем путь маршрута
+                        routePath.getSegments().forEach(function(segment) {
+                            segment.forEach(function(coords) {
+                                // Проверяем, содержится ли точка сегмента в любой из зон
+                                var isInsideAnyZone = zones.some(function (zone) {
+                                    return zone.geometry.contains(coords);
+                                });
+
+                                // Если хотя бы одна точка выходит за пределы зоны, прерываем проверку
+                                if (!isInsideAnyZone) {
+                                    isRouteInsideZones = false;
+                                }
+                            });
+                        });
+
+                        // Если маршрут выходит за пределы зоны, показываем ошибку
+                        if (!isRouteInsideZones) {
+                            alert("Ошибка: маршрут выходит за пределы зоны доставки!");
+                            map.geoObjects.remove(route);  // Удаляем маршрут с карты
+                            route = null;  // Очищаем переменную маршрута
+                        }
+                    }).catch(function (err) {
+                        console.error("Ошибка построения маршрута:", err);
+                    });
+                }).catch(function (err) {
+                    console.error("Ошибка геокодирования конечного адреса:", err);
+                });
+            }).catch(function (err) {
+                console.error("Ошибка геокодирования начального адреса:", err);
+            });
         }
 
         // Определение ближайшей точки
