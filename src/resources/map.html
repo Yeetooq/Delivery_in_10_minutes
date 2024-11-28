@@ -15,6 +15,23 @@
 </head>
 <body>
 <div id="map"></div>
+<div id="messageBox" style="
+    position: fixed;
+    top: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(50, 50, 50, 0.9);
+    color: white;
+    padding: 8px 15px;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    font-family: Arial, sans-serif;
+    font-size: 13px;
+    display: none;
+    z-index: 1000;">
+</div>
+
+
 <script>
     ymaps.ready(init);
 
@@ -188,6 +205,22 @@
                 })
                 .catch(err => console.error("Ошибка загрузки файла addresses.txt:", err));
         }
+        function showMessage(text) {
+            var messageBox = document.getElementById("messageBox");
+            messageBox.textContent = text;
+            messageBox.style.display = "block";
+            messageBox.style.opacity = "1"; // Появление
+
+            // Убираем через 5 секунд с анимацией
+            setTimeout(() => {
+                messageBox.style.transition = "opacity 0.5s";
+                messageBox.style.opacity = "0"; // Исчезновение
+                setTimeout(() => {
+                    messageBox.style.display = "none"; // Полное скрытие
+                }, 500); // Учитываем длительность анимации
+            }, 5000);
+        }
+
 
         // Функция удаления зон и меток
         function removeZonesAndMarkers() {
@@ -233,7 +266,7 @@
 
                     // Если хотя бы одна точка не находится в пределах зоны, показываем ошибку
                     if (!isStartInsideZone || !isEndInsideZone) {
-                        alert("Ошибка: одна из точек маршрута находится за пределами зоны доставки!");
+                        showMessage("Доставка осуществляется только в пределах Зеленограда!");
                         return;  // Прерываем выполнение, если точка вне зоны
                     }
 
